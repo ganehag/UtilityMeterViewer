@@ -1,0 +1,54 @@
+<form action="#">
+    <div>
+        <h5>Meter-Bus</h5>
+        <br>
+        <div class="">
+            <label>Baudrate</label>
+            <select id="settings-mbus-baudrate" class="browser-default" style="font-size: 140%;">
+              {{#each mbus.baudrates}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{title}}</option>
+              {{/each}}
+            </select>
+        </div>
+        <div class="">
+            <label>Address</label>
+            <select id="settings-mbus-addr" class="browser-default" style="font-size: 140%;">
+              {{#each mbus.addresses}}
+              <option value="{{addr}}" {{#if selected}}selected{{/if}}>{{addr}}</option>
+              {{/each}}
+            </select>
+        </div>
+        <p>
+            <input type="checkbox" id="settings-mbus-opto" {{#if mbus.optoWake}}checked="checked"{{/if}} />
+            <label for="settings-mbus-opto">Opto wake</label>
+        </p>
+
+        <br><br>
+
+        <h5>Kamstrup KMP</h5>
+
+        <p>
+            <input type="checkbox" id="settings-kmp-legacy" {{#if kmp.legacy}}checked="checked"{{/if}} />
+            <label for="settings-kmp-legacy">Legacy mode (KMP4)</label>
+        </p>
+
+        <br><br>
+
+        <h5>IEC61107</h5>
+
+        <br>
+        <div class="">
+            <label>Wakeup Rule</label>
+            <select id="settings-61107-wakeup" class="browser-default" style="font-size: 140%;">
+              {{#each iec61107.wakeup}}
+              <option value="{{value}}" {{#if selected}}selected{{/if}}>{{title}}</option>
+              {{/each}}
+            </select>
+        </div>
+
+        <p>
+            <input type="checkbox" id="settings-61107-optional" {{#if iec61107.optional}}checked="checked"{{/if}}/>
+            <label for="settings-61107-optional">Read optional data</label>
+        </p>
+    </div>
+</form>

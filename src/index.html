@@ -1,0 +1,158 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Utility Meter Viewer</title>
+
+  <link href="css/materialize.min.css" rel="stylesheet">
+  <link href="css/styles.css" rel="stylesheet" >
+  <script src="js/jquery-3.0.0.min.js"></script>
+  
+  <script src="js/handlebars.runtime-v4.0.5.js"></script>
+  <script src="js/handlebar-templates.js"></script>
+
+  <script src="js/materialize.min.js"></script>
+  <script src="js/mbus.js"></script>
+  <script src="js/mbus_addon.js"></script>
+  <script src="js/flag-list.js"></script>
+  <script src="js/application.js"></script>
+</head>
+
+<body>
+    <!-- Modal Structure -->
+    <div id="modal-dev-select" class="modal bottom-sheet">
+        <div class="modal-content"></div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-product-info" class="modal bottom-sheet">
+        <div class="modal-content">
+            <ul class="collection">
+                <li class="collection-item"><p><strong>Product Name</strong><br><span class="productName"></span></p></li>
+                <li class="collection-item"><p><strong>Identification Nr</strong><br><span class="idNr"></span></p></li>
+                <li class="collection-item"><p><strong>Access Nr</strong><br><span class="accessNo"></span></p></li>
+                <li class="collection-item"><p><strong>Medium</strong><br><span class="medium"></span></p></li>
+                <li class="collection-item"><p><strong>Type</strong><br><span class="type"></span></p></li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-file-load" class="modal bottom-sheet">
+        <div class="modal-content">
+            <div class="file-field input-field">
+              <div class="btn">
+                <span>Open</span>
+                <input type="file" id="file-selector" name="file" >
+              </div>
+              <div class="file-path-wrapper">
+                <input class="file-path validate" type="text">
+              </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-loading" class="modal bottom-sheet">
+        <div class="modal-content">
+            <div style="margin-left: auto; margin-right: auto; width: 60px;">
+                <div class="preloader-wrapper small active">
+                    <div class="spinner-layer spinner-blue">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div><div class="gap-patch">
+                      <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-red">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div><div class="gap-patch">
+                      <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-yellow">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div><div class="gap-patch">
+                      <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                    </div>
+
+                    <div class="spinner-layer spinner-green">
+                    <div class="circle-clipper left">
+                      <div class="circle"></div>
+                    </div><div class="gap-patch">
+                      <div class="circle"></div>
+                    </div><div class="circle-clipper right">
+                      <div class="circle"></div>
+                    </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Structure -->
+    <div id="modal-settings" class="modal bottom-sheet" style="max-height: 60%; height: 60%;">
+        <div class="modal-content">
+        </div>
+    </div>
+
+
+    <div id="toolbar" class="green darken-2" style="position: absolute;">
+        
+        <div style="float: right">
+            <button 
+                id="btn-file-load"
+                class="waves-effect waves-light btn-flat btn-large cyan tooltipped"
+                data-target="modal-file-load"
+                data-position="left"
+                data-delay="250"
+                data-tooltip="Load file ...">
+                    <i class="material-icons white-text">save</i>
+            </button>
+            <button 
+                id="btn-dev-select"
+                style="margin-left: -4px"
+                class="waves-effect waves-light btn-flat btn-large orange tooltipped"
+                data-oncolor="light-blue"
+                data-offcolor="orange"
+                data-target="modal-dev-select"
+                data-position="left"
+                data-delay="250"
+                data-tooltip="Connect to Device">
+                    <i class="material-icons white-text">usb</i>
+            </button>
+        </div>
+        
+        <button id="manufacturer" class="waves-effect waves-light btn white-text clearfix green lighten-1">
+
+        </button>
+    </div>
+    <div id="content-wrapper">
+        <div id="content">
+        </div>
+    </div>
+    <div class="fixed-action-btn horizontal" style="bottom: 20px; right: 24px;">
+        <a class="btn-floating btn-large red">
+          <i class="material-icons">menu</i>
+        </a>
+        <ul>
+          <li><a id="btn-mbus-readout" class="btn-floating red tooltipped" data-position="top" data-delay="50" data-tooltip="MBus readout"><i class="material-icons">receipt</i></a></li>
+          <li><a id="btn-kmp-readout" class="btn-floating blue darken-1 tooltipped" data-position="top" data-delay="50" data-tooltip="KMP readout"><i class="material-icons">receipt</i></a></li>
+          <li><a id="btn-61107-readout" class="btn-floating yellow darken-3 tooltipped" data-position="top" data-delay="50" data-tooltip="IEC61107 readout"><i class="material-icons">receipt</i></a></li>
+          <li><a id="btn-settings" class="btn-floating green lighten-1 tooltipped modal-trigger" data-position="top" data-delay="50" data-tooltip="Settings" data-target="modal-settings"><i class="material-icons">settings</i></a></li>
+        </ul>
+    </div>
+</body>
+</html>

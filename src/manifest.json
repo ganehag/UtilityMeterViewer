@@ -1,0 +1,26 @@
+{
+  "minimum_chrome_version": "33",
+  "manifest_version": 2,
+  "name": "Utility Meter Viewer",
+  "version": "0.1",
+  "description": "Utility Meter Viewer allows you to fetch data from a meter devices over either the Meter-Bus, Kamstrup (KMP) or IEC-61107 protocol.",
+  "offline_enabled": true,
+  "permissions": [
+    "serial",
+    "storage",
+    "fileSystem"
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "64": "icons/icon64.png",
+    "128": "icons/icon128.png"
+  },
+  "app": {
+    "background": {
+      "scripts": [
+        "js/background.js"
+      ]
+    }
+  }
+}

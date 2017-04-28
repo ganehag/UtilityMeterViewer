@@ -1,0 +1,83 @@
+html, body {
+    height: 100%;
+}
+
+#toolbar {
+    height: 94px;
+    width: 100%;
+}
+
+#toolbar .btn-flat {
+    height: 54px;
+    border-radius: 0;
+}
+
+#manufacturer {
+    height: 40px;
+    line-height: 40px;
+    padding: 0px 10px;
+    font-weight: 800;
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+    text-overflow: ellipsis;
+    text-align: center;
+    font-size: 120%;
+    text-transform: none;
+    box-shadow: none !important;
+}
+
+#modal-product-info {
+    max-height: 75%;
+    height: 75%;
+}
+
+#modal-product-info li strong {
+    font-weight: 800;
+}
+
+#content-wrapper {
+    height: 100%;
+    padding-top: 94px;
+}
+
+#content {
+    height: 100%;
+    overflow: auto;
+    padding-bottom: 80px;
+}
+
+@font-face {
+  font-family: 'Material Icons';
+  font-style: normal;
+  font-weight: 400;
+  src: local('Material Icons'), local('MaterialIcons-Regular'), url(../fonts/Material-Icons.ttf) format('truetype');
+}
+
+.material-icons {
+  font-family: 'Material Icons';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+}
+
+.clearfix {
+  overflow: auto;
+  zoom: 1;
+}
+
+.btn-dev-pick {
+    width: 100%;
+    text-align: left;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    box-shadow: none !important;
+}
