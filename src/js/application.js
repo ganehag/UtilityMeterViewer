@@ -239,38 +239,69 @@ window.onload = function() {
             serialPort = new SerialPort(null, this);
         });
 
-        $('#manufacturer').click(function(e) {
-            e.preventDefault();
-
-            if($(this).data()) {
-                $('#modal-product-info').openModal({
-                    ready: function() {
-                        var man = $('#manufacturer');
-                        $('#modal-product-info .modal-content li span').html('');
-                        if(man.data('productName') !== undefined) {
-                            $('#modal-product-info .modal-content span.productName').html(man.data('productName'));
-                        }
-                        if(man.data('idNr') !== undefined) {
-                            $('#modal-product-info .modal-content span.idNr').html(man.data('idNr'));
-                        }
-                        if(man.data('accessNo') !== undefined) {
-                            $('#modal-product-info .modal-content span.accessNo').html(man.data('accessNo'));
-                        }
-                        if(man.data('medium') !== undefined) {
-                            $('#modal-product-info .modal-content span.medium').html(man.data('medium'));
-                        }
-                        if(man.data('type') !== undefined) {
-                            $('#modal-product-info .modal-content span.type').html(man.data('type'));
-                        }
-                    }
-                });
+        $('#modal-product-info').modal({
+            ready: function(modal, trigger) {
+                var man = $('#manufacturer');
+                $('#modal-product-info .modal-content li span').html('');
+                if(man.data('productName') !== undefined) {
+                    $('#modal-product-info .modal-content span.productName').html(man.data('productName'));
+                }
+                if(man.data('idNr') !== undefined) {
+                    $('#modal-product-info .modal-content span.idNr').html(man.data('idNr'));
+                }
+                if(man.data('accessNo') !== undefined) {
+                    $('#modal-product-info .modal-content span.accessNo').html(man.data('accessNo'));
+                }
+                if(man.data('medium') !== undefined) {
+                    $('#modal-product-info .modal-content span.medium').html(man.data('medium'));
+                }
+                if(man.data('type') !== undefined) {
+                    $('#modal-product-info .modal-content span.type').html(man.data('type'));
+                }
             }
         });
 
-        $('#btn-file-load').leanModal();
+        $('#modal-file-load').modal({
+            ready: function(modal, trigger) {
+            }
+        });
 
-        $('#btn-settings').leanModal({
-            ready: function() {
+        $('#modal-dev-select').modal({
+            ready: function(modal, trigger) {
+
+                if(serialPort.connectionId === null) {
+                    chrome.serial.getDevices(function(ports) {
+                        var eligiblePorts = ports;
+                        var modalContent = $('#modal-dev-select .modal-content');
+                        modalContent.empty();
+
+                        if (eligiblePorts.length > 0) {
+                            eligiblePorts.forEach(function(portObj) {
+                                modalContent.append(
+                                    '<a class="btn-large btn btn-dev-pick transparent grey-text text-darken-3" data-path="'+portObj.path+'"><i class="material-icons left">usb</i>'+portObj.path+' ('+portObj.displayName+')</a>'
+                                );
+                            });
+                        }
+
+                        modalContent.find('a').click(function(e) {
+                            e.preventDefault();
+                            var path = $(this).data('path');
+                            $(modal).modal('close');
+
+                            serialPort.connect(path, function() {
+                                var oncolor = $('#btn-dev-select').data('oncolor');
+                                var offcolor = $('#btn-dev-select').data('offcolor');
+                                $('#btn-dev-select').removeClass(offcolor).addClass(oncolor);
+                                Materialize.toast('Connected', 1000);
+                            });
+                        })
+                    });
+                }
+            }
+        });
+
+        $('#modal-settings').modal({
+            ready: function(modal, trigger) {
                 var mbusAddr = [];
                 for(var i=1; i < 255; i++) {
                     mbusAddr.push({
@@ -297,6 +328,9 @@ window.onload = function() {
                             {value: 600, title: "600", selected: mb_baud === 600 ? true : false},
                             {value: 1200, title: "1200", selected: mb_baud === 1200 ? true : false},
                             {value: 2400, title: "2400 (typical)", selected: mb_baud === 2400 ? true : false},
+                            {value: 4800, title: "4800", selected: mb_baud === 4800 ? true : false},
+                            {value: 9600, title: "9600", selected: mb_baud === 9600 ? true : false},
+                            {value: 115200, title: "115200 (debug)", selected: mb_baud === 115200 ? true : false},
                         ],
                         addresses: mbusAddr,
                         optoWake: app.options.mbus.optoWake
@@ -330,18 +364,41 @@ window.onload = function() {
             }
         });
 
+        $('#manufacturer').click(function(e) {
+            e.preventDefault();
+
+            if($(this).data()) {
+                $('#modal-product-info').modal('open');
+            }
+        });
+
+        $('#btn-dev-select').click(function(e) {
+            e.preventDefault();
+
+            if(serialPort.connectionId === null) {
+                $('#modal-dev-select').modal('open');
+            } else {
+                serialPort.disconnect(function() {
+                    var oncolor = $('#btn-dev-select').data('oncolor');
+                    var offcolor = $('#btn-dev-select').data('offcolor');
+                    $('#btn-dev-select').removeClass(oncolor).addClass(offcolor);
+                    Materialize.toast('Disconnected', 1000);
+                });
+            }
+        });
+
         $('#btn-mbus-readout').click(function(e) {
             e.preventDefault();
             if(serialPort.connectionId !== null) {
-                $('#modal-loading').openModal({
+                $('#modal-loading').modal({
                     dismissible: false,
-                    ready: function() {
+                    ready: function(modal, trigger) {
+                        $('#content').html("");
+                        $('#manufacturer').html("");
+
                         serialPort.mbus.performReadout(function(frame) {
                             if(frame) {
                                 $('#manufacturer').removeData();
-
-                                // console.log(frame);
-                                // console.log(frame.body.get().header);
 
                                 var hdr = frame.body.get().header;
                                 var mbus = new MBus();
@@ -372,10 +429,11 @@ window.onload = function() {
                                 $('#content').html(html);
                             }
 
-                            $('#modal-loading').closeModal();
+                            $('#modal-loading').modal('close');
                         });
                     }
                 });
+                $('#modal-loading').modal('open');
             } else {
                 Materialize.toast("Connection not established", 2000);
             }
@@ -384,11 +442,16 @@ window.onload = function() {
         $('#btn-kmp-readout').click(function(e) {
             e.preventDefault();
             if(serialPort.connectionId !== null) {
-                $('#modal-loading').openModal({
+                $('#modal-loading').modal({
                     dismissible: false,
-                    ready: function() {
+                    ready: function(modal, trigger) {
                         $('#content').html("");
                         $('#manufacturer').html("");
+
+
+                        // KMP4..
+                        // In general, the reading is built-up according to EN61107/IEC1107, Mode A, but BCC is calculated arithmatically as on M-Bus and not as module 2-binary sum ISO1155.
+
                         serialPort.kmp.performReadout(function(records) {
                             if(records && records.length) {
                                 $('#manufacturer').html("Kamstrup 6XX/8XX");
@@ -396,10 +459,11 @@ window.onload = function() {
                                 $('#content').html(html);
                             }
 
-                            $('#modal-loading').closeModal();
+                            $('#modal-loading').modal('close');
                         }, app.options.kmp.registers.slice(0, 8));
                     }
                 });
+                $('#modal-loading').modal('open');
             } else {
                 Materialize.toast("Connection not established", 2000);
             }
@@ -408,9 +472,9 @@ window.onload = function() {
         $('#btn-61107-readout').click(function(e) {
             e.preventDefault();
             if(serialPort.connectionId !== null) {
-                $('#modal-loading').openModal({
+                $('#modal-loading').modal({
                     dismissible: false,
-                    ready: function() {
+                    ready: function(modal, trigger) {
                         $('#content').html("");
                         $('#manufacturer').html("");
                         serialPort.iec61107.performReadout(function(records) {
@@ -418,60 +482,15 @@ window.onload = function() {
                                 var html = Handlebars.templates['iec-table.html']({records: records});
                                 $('#content').html(html);
                             }
-                            $('#modal-loading').closeModal();    
+                            $('#modal-loading').modal('close');    
                         });
                     }
                 });
+                $('#modal-loading').modal('open');
             } else {
                 Materialize.toast("Connection not established", 2000);
             }
         });
-
-        $('#btn-dev-select').click(function(e) {
-            e.preventDefault();
-
-            var modalId = $('#btn-dev-select').data('target');
-
-            if(serialPort.connectionId === null) {
-                $('#'+modalId).openModal();
-
-                chrome.serial.getDevices(function(ports) {
-                    var eligiblePorts = ports;
-                    var modalContent = $('#modal-dev-select .modal-content');
-                    modalContent.empty();
-
-                    if (eligiblePorts.length > 0) {
-                        eligiblePorts.forEach(function(portObj) {
-                            modalContent.append(
-                                '<a class="btn-large btn btn-dev-pick transparent grey-text text-darken-3" data-path="'+portObj.path+'"><i class="material-icons left">usb</i>'+portObj.path+' ('+portObj.displayName+')</a>'
-                            );
-                        });
-                    }
-
-                    modalContent.find('a').click(function(e) {
-                        e.preventDefault();
-                        var path = $(this).data('path');
-                        $('#modal-dev-select').closeModal();
-
-                        serialPort.connect(path, function() {
-                            var oncolor = $('#btn-dev-select').data('oncolor');
-                            var offcolor = $('#btn-dev-select').data('offcolor');
-                            $('#btn-dev-select').removeClass(offcolor).addClass(oncolor);
-                            Materialize.toast('Connected', 1000);
-                        });
-                    })
-                });
-            } else {
-                serialPort.disconnect(function() {
-                    var oncolor = $('#btn-dev-select').data('oncolor');
-                    var offcolor = $('#btn-dev-select').data('offcolor');
-                    $('#btn-dev-select').removeClass(oncolor).addClass(offcolor);
-                    Materialize.toast('Disconnected', 1000);
-                });
-            }
-            
-        });
-
 
         function handleFileSelect(evt) {
             var files = evt.target.files; // FileList object

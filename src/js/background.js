@@ -13,9 +13,9 @@ Background.prototype.newWindow = function() {
     id: appWindowId,
     frame: 'chrome',
     innerBounds: { 
-      width: 325, 
+      width: 610, // 325
       height: 480, 
-      minWidth: 325,
+      minWidth: 610, // 325
       minHeight: 480
     }
   };

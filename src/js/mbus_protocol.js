@@ -10,8 +10,8 @@ var MBusProtocol = function(app, serialPort) {
 };
 MBusProtocol.prototype.performReadout = function(callback) {
     var self = this;
-    if($('#settings-mbus-opto').is(':checked')) {
-        self.optoWake(function() {
+    if(self.app.options.mbus.optoWake) {
+        self.optoWake(function(result) {
             self.stage1.call(self, callback);
         });
     } else {
@@ -22,23 +22,29 @@ MBusProtocol.prototype.stage1 = function(callback) {
     var self = this;
     self.final_callback = callback;
     self.serialPort.state = 'recv';
+    self.serialPort.timer = 100;
+    self.serialPort.eot_char = null;
 
     var mbus = new MBus();
     var frame = mbus.pingFrame(self.app.options.mbus.address);
 
-    chrome.serial.update(self.serialPort.connectionId, {
+    var serialOpts = {
         bitrate: self.app.options.mbus.baudrate, 
         dataBits: self.default.dataBits,
         parityBit: self.default.parityBit,
         stopBits: self.default.stopBits
-    }, function(result) {
-        chrome.serial.send(self.serialPort.connectionId, str2ab(frame), function(result) {
-            self.stage2.call(self, result);
+    };
+
+    chrome.serial.update(self.serialPort.connectionId, serialOpts, function(r1) {
+        chrome.serial.send(self.serialPort.connectionId, str2ab(frame), function(r2) {
+            self.stage2.call(self, r2);
         });
     });
 };
 MBusProtocol.prototype.stage2 = function(result) {
     var self = this;
+    self.serialPort.timer = 1000;
+    
     self.serialPort.recvWatchdog(function(data) {
         var mbus = new MBus();
         try {
@@ -90,28 +96,26 @@ MBusProtocol.prototype.optoWake = function(callback) {
     if(self.connectionId === null) {
         callback.apply(self);
     } else {
-        var wake_bitrate = self.app.options.mbus.baudrate; // FIXME: Should we always use 2400 baud here? self.options.bitrate;
-
-        chrome.serial.update(self.serialPort.connectionId, {
-            bitrate: wake_bitrate, 
+        // FIXME: Should we always use 2400 baud here? self.options.bitrate;
+        var serialOpts = {
+            bitrate: self.app.options.mbus.baudrate, 
             dataBits: "eight",
             parityBit: "no",
             stopBits: "one"
-        }, function(result) {
+        };
+
+        chrome.serial.update(self.serialPort.connectionId, serialOpts, function(result) {
             var numChars = 0;
             var i1 = setInterval(function() {
-                chrome.serial.send(self.serialPort.connectionId, str2ab("\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55"), function() {
+                chrome.serial.send(self.serialPort.connectionId, str2ab("\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55"), function(result) {
                     numChars += 10;
                 });
-            }, (100/wake_bitrate)*1000);
+            }, (100/serialOpts.bitrate)*1000);
 
             setTimeout(function() {
                 clearInterval(i1);
-
-                setTimeout(function() {
-                    chrome.serial.update(self.serialPort.connectionId, self.serialPort.options, callback);    
-                }, 200);
-            }, 2200);
+                chrome.serial.flush(self.serialPort.connectionId, callback);
+            }, 2000);
         });
     }
 };

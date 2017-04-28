@@ -118,7 +118,7 @@
         <div style="float: right">
             <button 
                 id="btn-file-load"
-                class="waves-effect waves-light btn-flat btn-large cyan tooltipped"
+                class="waves-effect waves-light btn-flat btn-large cyan tooltipped modal-trigger "
                 data-target="modal-file-load"
                 data-position="left"
                 data-delay="250"
@@ -128,10 +128,9 @@
             <button 
                 id="btn-dev-select"
                 style="margin-left: -4px"
-                class="waves-effect waves-light btn-flat btn-large orange tooltipped"
+                class="waves-effect waves-light btn-flat btn-large orange tooltipped modal-trigger "
                 data-oncolor="light-blue"
                 data-offcolor="orange"
-                data-target="modal-dev-select"
                 data-position="left"
                 data-delay="250"
                 data-tooltip="Connect to Device">
@@ -147,15 +146,24 @@
         <div id="content">
         </div>
     </div>
-    <div class="fixed-action-btn horizontal" style="bottom: 20px; right: 24px;">
+    <div class="fixed-action-btn horizontal click-to-toggle" style="bottom: 20px; right: 24px;">
         <a class="btn-floating btn-large red">
           <i class="material-icons">menu</i>
         </a>
         <ul>
-          <li><a id="btn-mbus-readout" class="btn-floating red tooltipped" data-position="top" data-delay="50" data-tooltip="MBus readout"><i class="material-icons">receipt</i></a></li>
-          <li><a id="btn-kmp-readout" class="btn-floating blue darken-1 tooltipped" data-position="top" data-delay="50" data-tooltip="KMP readout"><i class="material-icons">receipt</i></a></li>
-          <li><a id="btn-61107-readout" class="btn-floating yellow darken-3 tooltipped" data-position="top" data-delay="50" data-tooltip="IEC61107 readout"><i class="material-icons">receipt</i></a></li>
-          <li><a id="btn-settings" class="btn-floating green lighten-1 tooltipped modal-trigger" data-position="top" data-delay="50" data-tooltip="Settings" data-target="modal-settings"><i class="material-icons">settings</i></a></li>
+          <li><a id="btn-mbus-readout" class="btn-floating red tooltipped" data-position="top" data-delay="50" data-tooltip="MBus readout"><i class="material-icons">device_hub</i></a></li>
+          <li><a id="btn-kmp-readout" class="btn-floating blue darken-1 tooltipped" data-position="top" data-delay="50" data-tooltip="KMP readout"><i class="material-icons">memory</i></a></li>
+          <li><a id="btn-61107-readout" class="btn-floating yellow darken-3 tooltipped" data-position="top" data-delay="50" data-tooltip="IEC61107 readout"><i class="material-icons">developer_board</i></a></li>
+          <li><a
+            id="btn-settings"
+            class="btn-floating green lighten-1 tooltipped modal-trigger"
+            data-position="top"
+            data-delay="50"
+            data-tooltip="Settings"
+            data-target="modal-settings">
+              <i class="material-icons">settings</i>
+            </a>
+          </li>
         </ul>
     </div>
 </body>
