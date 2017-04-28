@@ -17,6 +17,25 @@ templates['iec-table.html'] = template({"1":function(container,depth0,helpers,pa
     + ((stack1 = helpers.each.call(depth0 != null ? depth0 : {},(depth0 != null ? depth0.records : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + "    </tbody>\n</table>";
 },"useData":true});
+templates['kmp-table.html'] = template({"1":function(container,depth0,helpers,partials,data) {
+    var alias1=container.lambda, alias2=container.escapeExpression;
+
+  return "            <tr title=\""
+    + alias2(alias1((depth0 != null ? depth0.desc : depth0), depth0))
+    + "\">\n                <td>"
+    + alias2((helpers.counter || (depth0 && depth0.counter) || helpers.helperMissing).call(depth0 != null ? depth0 : {},(data && data.index),{"name":"counter","hash":{},"data":data}))
+    + "</td>\n                <td>"
+    + alias2(alias1((depth0 != null ? depth0.func : depth0), depth0))
+    + "</td>\n                <td>"
+    + alias2(alias1((depth0 != null ? depth0.value : depth0), depth0))
+    + "</td>\n            </tr>\n";
+},"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
+    var stack1;
+
+  return "<table class=\"striped\">\n    <tbody>\n"
+    + ((stack1 = helpers.each.call(depth0 != null ? depth0 : {},(depth0 != null ? depth0.records : depth0),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "    </tbody>\n</table>";
+},"useData":true});
 templates['records-table.html'] = template({"1":function(container,depth0,helpers,partials,data) {
     var alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3=container.escapeExpression, alias4=container.lambda;
 
@@ -62,6 +81,20 @@ templates['settings.html'] = template({"1":function(container,depth0,helpers,par
     + "</option>\n";
 },"6":function(container,depth0,helpers,partials,data) {
     return "checked=\"checked\"";
+},"8":function(container,depth0,helpers,partials,data) {
+    var stack1, helper, alias1=depth0 != null ? depth0 : {}, alias2=helpers.helperMissing, alias3="function", alias4=container.escapeExpression;
+
+  return "            <option value=\""
+    + alias4(((helper = (helper = helpers.addr || (depth0 != null ? depth0.addr : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"addr","hash":{},"data":data}) : helper)))
+    + "\" title=\""
+    + alias4(((helper = (helper = helpers.desc || (depth0 != null ? depth0.desc : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"desc","hash":{},"data":data}) : helper)))
+    + "\" "
+    + ((stack1 = helpers["if"].call(alias1,(depth0 != null ? depth0.selected : depth0),{"name":"if","hash":{},"fn":container.program(2, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + ">"
+    + alias4(((helper = (helper = helpers.reg || (depth0 != null ? depth0.reg : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"reg","hash":{},"data":data}) : helper)))
+    + " | "
+    + alias4(((helper = (helper = helpers.desc || (depth0 != null ? depth0.desc : depth0)) != null ? helper : alias2),(typeof helper === alias3 ? helper.call(alias1,{"name":"desc","hash":{},"data":data}) : helper)))
+    + "</option>\n";
 },"compiler":[7,">= 4.0.0"],"main":function(container,depth0,helpers,partials,data) {
     var stack1, alias1=depth0 != null ? depth0 : {};
 
@@ -73,7 +106,9 @@ templates['settings.html'] = template({"1":function(container,depth0,helpers,par
     + ((stack1 = helpers["if"].call(alias1,((stack1 = (depth0 != null ? depth0.mbus : depth0)) != null ? stack1.optoWake : stack1),{"name":"if","hash":{},"fn":container.program(6, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + " />\n            <label for=\"settings-mbus-opto\">Opto wake</label>\n        </p>\n\n        <br><br>\n\n        <h5>Kamstrup KMP</h5>\n\n        <p>\n            <input type=\"checkbox\" id=\"settings-kmp-legacy\" "
     + ((stack1 = helpers["if"].call(alias1,((stack1 = (depth0 != null ? depth0.kmp : depth0)) != null ? stack1.legacy : stack1),{"name":"if","hash":{},"fn":container.program(6, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
-    + " />\n            <label for=\"settings-kmp-legacy\">Legacy mode (KMP4)</label>\n        </p>\n\n        <br><br>\n\n        <h5>IEC61107</h5>\n\n        <br>\n        <div class=\"\">\n            <label>Wakeup Rule</label>\n            <select id=\"settings-61107-wakeup\" class=\"browser-default\" style=\"font-size: 140%;\">\n"
+    + " />\n            <label for=\"settings-kmp-legacy\">Legacy mode (KMP4)</label>\n        </p>\n        <div class=\"\">\n            <select id=\"settings-kmp-registers\" class=\"browser-default\" style=\"height: 10em; font-size: 130%;\" multiple>\n"
+    + ((stack1 = helpers.each.call(alias1,((stack1 = (depth0 != null ? depth0.kmp : depth0)) != null ? stack1.registers : stack1),{"name":"each","hash":{},"fn":container.program(8, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
+    + "            </select>\n        </div>\n\n        <br><br>\n\n        <h5>IEC61107</h5>\n\n        <br>\n        <div class=\"\">\n            <label>Wakeup Rule</label>\n            <select id=\"settings-61107-wakeup\" class=\"browser-default\" style=\"font-size: 140%;\">\n"
     + ((stack1 = helpers.each.call(alias1,((stack1 = (depth0 != null ? depth0.iec61107 : depth0)) != null ? stack1.wakeup : stack1),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + "            </select>\n        </div>\n\n        <p>\n            <input type=\"checkbox\" id=\"settings-61107-optional\" "
     + ((stack1 = helpers["if"].call(alias1,((stack1 = (depth0 != null ? depth0.iec61107 : depth0)) != null ? stack1.optional : stack1),{"name":"if","hash":{},"fn":container.program(6, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")

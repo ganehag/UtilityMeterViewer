@@ -1,0 +1,11 @@
+<table class="striped">
+    <tbody>
+        {{#each records}}
+            <tr title="{{this.desc}}">
+                <td>{{counter @index}}</td>
+                <td>{{this.func}}</td>
+                <td>{{this.value}}</td>
+            </tr>
+        {{/each}}
+    </tbody>
+</table>

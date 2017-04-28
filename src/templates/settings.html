@@ -31,6 +31,13 @@
             <input type="checkbox" id="settings-kmp-legacy" {{#if kmp.legacy}}checked="checked"{{/if}} />
             <label for="settings-kmp-legacy">Legacy mode (KMP4)</label>
         </p>
+        <div class="">
+            <select id="settings-kmp-registers" class="browser-default" style="height: 10em; font-size: 130%;" multiple>
+            {{#each kmp.registers}}
+            <option value="{{addr}}" title="{{desc}}" {{#if selected}}selected{{/if}}>{{reg}} | {{desc}}</option>
+            {{/each}}
+            </select>
+        </div>
 
         <br><br>
 

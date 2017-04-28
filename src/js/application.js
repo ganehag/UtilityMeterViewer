@@ -14,13 +14,17 @@ Handlebars.registerHelper("fixround", function (value){
     return parseFloat((value).toFixed(8));
 });
 
-String.prototype.hexEncode = function(){
+String.prototype.hexEncode = function(useArray){
     var hex, i;
 
-    var result = "";
+    var result = useArray ? [] : "";
     for (i=0; i<this.length; i++) {
         hex = this.charCodeAt(i).toString(16);
-        result += ("000"+hex).slice(-4);
+        if(useArray) {
+            result.push(("000"+hex).slice(-4));
+        } else {
+            result += ("000"+hex).slice(-4);
+        }
     }
 
     return result
@@ -53,6 +57,7 @@ var Application = function(options, callback) {
             address: 254
         },
         kmp: {
+            registers: [], // 0x3c, 0x44, 0x50, 0x56, 0x57, 0x4a
             legacy: false
         },
         iec61107: {
@@ -104,6 +109,10 @@ Application.prototype.saveSettings = function(callback) {
     settings.mbus.address = parseInt($('#settings-mbus-addr').val());
 
     settings.kmp.legacy = $('#settings-kmp-legacy').is(':checked');
+    settings.kmp.registers = [];
+    $.each($("#settings-kmp-registers option:selected"), function(){
+        settings.kmp.registers.push(parseInt($(this).val()));
+    });
 
     settings.iec61107.wakeup = parseInt($('#settings-61107-wakeup').val());
     settings.iec61107.optional = $('#settings-61107-optional').is(':checked');
@@ -155,6 +164,7 @@ var SerialPort = function(opts, app) {
 
     this.mbus = new MBusProtocol(app, this);
     this.iec61107 = new IEC61107Protocol(app, this);
+    this.kmp = new KMPProtocol(app, this);
 };
 SerialPort.prototype.recvWatchdog = function(callback) {
     var self = this;
@@ -222,308 +232,6 @@ SerialPort.prototype.reconnect = function() {
 };
 
 
-var MBusProtocol = function(app, serialPort) {
-    this.app = app;
-    this.serialPort = serialPort;
-    this.default = {
-        bitrate: 2400,
-        dataBits: "eight",
-        parityBit: "even",
-        stopBits: "one"
-    };
-};
-MBusProtocol.prototype.performReadout = function(callback) {
-    var self = this;
-    if($('#settings-mbus-opto').is(':checked')) {
-        self.optoWake(function() {
-            self.stage1.call(self, callback);
-        });
-    } else {
-        self.stage1.call(self, callback);
-    }
-};
-MBusProtocol.prototype.stage1 = function(callback) {
-    var self = this;
-    self.final_callback = callback;
-    self.serialPort.state = 'recv';
-
-    var mbus = new MBus();
-    var frame = mbus.pingFrame(self.app.options.mbus.address);
-
-    chrome.serial.update(self.serialPort.connectionId, {
-        bitrate: self.app.options.mbus.baudrate, 
-        dataBits: self.default.dataBits,
-        parityBit: self.default.parityBit,
-        stopBits: self.default.stopBits
-    }, function(result) {
-        chrome.serial.send(self.serialPort.connectionId, str2ab(frame), function(result) {
-            self.stage2.call(self, result);
-        });
-    });
-};
-MBusProtocol.prototype.stage2 = function(result) {
-    var self = this;
-    self.serialPort.recvWatchdog(function(data) {
-        var mbus = new MBus();
-        try {
-            var frame = mbus.load(data);
-            // FIXME: verify if ACK frame
-
-            self.stage3.call(self);
-
-        } catch(err) {
-            Materialize.toast(err, 2000);
-            return self.final_callback.call(self);
-        }
-    });
-};
-MBusProtocol.prototype.stage3 = function(result) {
-    var self = this;
-    self.serialPort.state = 'recv';
-
-    var mbus = new MBus();
-    var frame = mbus.requestFrame(self.app.options.mbus.address);
-
-
-    function convertToHex(str) {
-        var hex = '';
-        for(var i=0;i<str.length;i++) {
-            hex += ''+str.charCodeAt(i).toString(16);
-        }
-        return hex;
-    }
-
-    chrome.serial.send(self.serialPort.connectionId, str2ab(frame.toString()), function(result) {
-        self.serialPort.recvWatchdog(function(data) {
-            var mbus = new MBus();
-            try {
-                var frame = mbus.load(data);
-
-                self.final_callback(frame);
-
-            } catch(err) {
-                Materialize.toast(err, 2000);
-                return self.final_callback.call(self);
-            }
-        });
-    });
-};
-MBusProtocol.prototype.optoWake = function(callback) {
-    var self = this;
-
-    if(self.connectionId === null) {
-        callback.apply(self);
-    } else {
-        var wake_bitrate = self.app.options.mbus.baudrate; // FIXME: Should we always use 2400 baud here? self.options.bitrate;
-
-        chrome.serial.update(self.serialPort.connectionId, {
-            bitrate: wake_bitrate, 
-            dataBits: "eight",
-            parityBit: "no",
-            stopBits: "one"
-        }, function(result) {
-            var numChars = 0;
-            var i1 = setInterval(function() {
-                chrome.serial.send(self.serialPort.connectionId, str2ab("\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55"), function() {
-                    numChars += 10;
-                });
-            }, (100/wake_bitrate)*1000);
-
-            setTimeout(function() {
-                clearInterval(i1);
-
-                setTimeout(function() {
-                    chrome.serial.update(self.serialPort.connectionId, self.serialPort.options, callback);    
-                }, 200);
-            }, 2200);
-        });
-    }
-};
-
-var IEC61107Protocol = function(app, serialPort) {
-    this.app = app;
-    this.serialPort = serialPort;
-    this.default = {
-        bitrate: 300,
-        dataBits: "seven",
-        parityBit: "even",
-        stopBits: "two"
-    };
-    this.STX = '\x02';
-    this.ETX = '\x03';
-};
-IEC61107Protocol.prototype.reply_speed = function(c) {
-  var speed = 300;
-
-  switch(c) {
-    case 'A':
-    case '1':
-      speed = 600;
-      break;
-    case '2':
-    case 'B':
-      speed = 1200;
-      break;
-    case '3':
-    case 'C':
-      speed = 2400;
-      break;
-    case '4':
-    case 'D':
-      speed = 4800;
-      break;
-    case '5':
-    case 'E':
-      speed = 9600;
-      break;
-    case '6':
-    case 'F':
-      speed = 19200;
-      break;
-  }
-  return speed;
-};
-IEC61107Protocol.prototype.optoWake = function(callback) {
-    var self = this;
-
-    if(self.serialPort.connectionId === null) {
-        callback.apply(this);
-    } else {
-        var bitrate,
-            i,
-            wake_str = "",
-            wakeup_len,
-            wakeup_mode = self.app.options.iec61107.wakeup;
-
-        // FROM LUG 2WR5 Documentation
-        if(wakeup_mode == 0) {
-            bitrate = 300;
-            wakeup_len = 40;
-        }
-        else if(wakeup_mode == 1) {
-            abitrate = 2400;
-            wakeup_len = 229;
-        }
-        else if(wakeup_mode == 2) {
-            bitrate = 2400;
-            wakeup_len = 130;
-        } /* 62056 wake */
-        else if(wakeup_mode == 3) {
-            bitrate = 300;
-            wakeup_len = 66;
-        } /* 62056 fast wake */
-        else if(wakeup_mode == 4) {
-            bitrate = 300;
-            wakeup_len = 15;
-        }
-
-        for(i=0; i < wakeup_len; i++) {
-            wake_str += "\x00";
-        }
-
-        chrome.serial.update(self.serialPort.connectionId, {
-            bitrate: bitrate, 
-            dataBits: self.default.dataBits,
-            parityBit: self.default.parityBit,
-            stopBits: self.default.stopBits
-        }, function(result) {
-            chrome.serial.send(self.serialPort.connectionId, str2ab(wake_str), function(result) {
-                if(callback) {
-                    callback.call(self);
-                }
-            });
-        });
-
-    }
-};
-IEC61107Protocol.prototype.performReadout = function(callback) {
-    var self = this;
-    if($('#settings-iec61107-wakeup').val() != -1) {
-        self.optoWake(function() {
-            self.stage1.call(self, callback);
-        });
-    } else {
-        self.stage1.call(self, callback);
-    }
-};
-IEC61107Protocol.prototype.stage1 = function(callback) {
-    var self = this;
-    self.final_callback = callback;
-    self.serialPort.state = 'recv';
-    self.serialPort.timer = 3000;
-    self.serialPort.eot_char = '\n'; // Terminate read on newline
-
-    chrome.serial.update(self.serialPort.connectionId, {
-        bitrate: self.default.bitrate, 
-        dataBits: self.default.dataBits,
-        parityBit: self.default.parityBit,
-        stopBits: self.default.stopBits
-    }, function(result) {
-        var req = "/?!\r\n";
-
-        // FIXME: hack for 2WR5, nothing in IEC61107 about this
-        if(self.app.options.iec61107.optional) {
-            req = "/#!\r\n"; 
-        }
-
-        chrome.serial.send(self.serialPort.connectionId, str2ab(req), function(result) {
-            self.stage2.call(self, result);
-        });
-    });
-};
-
-IEC61107Protocol.prototype.stage2 = function(result) {
-    var self = this;
-    self.serialPort.recvWatchdog(function(data) {
-        if(data.length >= 5) {
-            var manufacturer = data.slice(1, 4);
-            var details_link = '<i class="material-icons left white-text">info</i> ';
-
-            if(FlagList !== undefined && FlagList.hasOwnProperty(manufacturer)) {
-                $('#manufacturer').html(details_link + FlagList[manufacturer].company).prop('title', FlagList[manufacturer].company);
-            } else {
-                $('#manufacturer').html(details_link + manufacturer).prop('title', manufacturer);
-            }
-
-            var new_speed = self.reply_speed(data[4]);
-
-            chrome.serial.update(self.serialPort.connectionId, {
-                bitrate: new_speed, 
-                dataBits: self.default.dataBits,
-                parityBit: self.default.parityBit,
-                stopBits: self.default.stopBits
-            }, function(result) {
-                self.serialPort.state = 'recv';
-                self.serialPort.eot_char = null;
-                self.stage3.call(self, result);
-            });
-        } else {
-            Materialize.toast("Timeout occured", 2000);
-            return self.final_callback.call();
-        }
-    });
-};
-IEC61107Protocol.prototype.stage3 = function(result) {
-    var self = this;
-    self.serialPort.recvWatchdog(function(data) {
-        var content = "" + data;
-        if(content[0] == self.STX) {
-            content = content.slice(1, content.indexOf(self.ETX));
-        }
-        var re = /([^\(]*)\(([^\)]*)\)/g,
-            match;
-
-        var table = [];
-        while (match = re.exec(content)) {
-            if(match.length >= 3) {
-                table.push({func: match[1], value: match[2]});
-            }
-        }
-
-        self.final_callback(table);
-    });
-};
-
 window.onload = function() {
     $('document').ready(function() {
         var serialPort = null;
@@ -570,6 +278,16 @@ window.onload = function() {
                         selected: i === app.options.mbus.address ? true : false
                     });
                 }
+
+                var kmp_regs = JSON.parse(JSON.stringify(KMPRegisters));
+                $.each(kmp_regs, function(index, item) {
+                    if(app.options.kmp.registers.indexOf(item.addr) >= 0) {
+                        item.selected = true;
+                    } else {
+                        item.selected = false;
+                    }
+                });
+
                 var mb_baud = app.options.mbus.baudrate;
                 var iec_wakup = app.options.iec61107.wakeup;
                 var template_data = {
@@ -584,6 +302,7 @@ window.onload = function() {
                         optoWake: app.options.mbus.optoWake
                     },
                     kmp: {
+                        registers: kmp_regs,
                         legacy: app.options.kmp.legacy
                     },
                     iec61107: {
@@ -664,7 +383,26 @@ window.onload = function() {
 
         $('#btn-kmp-readout').click(function(e) {
             e.preventDefault();
-            Materialize.toast('Function not implemented yet', 2000);
+            if(serialPort.connectionId !== null) {
+                $('#modal-loading').openModal({
+                    dismissible: false,
+                    ready: function() {
+                        $('#content').html("");
+                        $('#manufacturer').html("");
+                        serialPort.kmp.performReadout(function(records) {
+                            if(records && records.length) {
+                                $('#manufacturer').html("Kamstrup 6XX/8XX");
+                                var html = Handlebars.templates['kmp-table.html']({records: records});
+                                $('#content').html(html);
+                            }
+
+                            $('#modal-loading').closeModal();
+                        }, app.options.kmp.registers.slice(0, 8));
+                    }
+                });
+            } else {
+                Materialize.toast("Connection not established", 2000);
+            }
         });
 
         $('#btn-61107-readout').click(function(e) {
