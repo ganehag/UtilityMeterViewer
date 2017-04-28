@@ -112,6 +112,6 @@ templates['settings.html'] = template({"1":function(container,depth0,helpers,par
     + ((stack1 = helpers.each.call(alias1,((stack1 = (depth0 != null ? depth0.iec61107 : depth0)) != null ? stack1.wakeup : stack1),{"name":"each","hash":{},"fn":container.program(1, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
     + "            </select>\n        </div>\n\n        <p>\n            <input type=\"checkbox\" id=\"settings-61107-optional\" "
     + ((stack1 = helpers["if"].call(alias1,((stack1 = (depth0 != null ? depth0.iec61107 : depth0)) != null ? stack1.optional : stack1),{"name":"if","hash":{},"fn":container.program(6, data, 0),"inverse":container.noop,"data":data})) != null ? stack1 : "")
-    + "/>\n            <label for=\"settings-61107-optional\">Read optional data</label>\n        </p>\n    </div>\n</form>";
+    + "/>\n            <label for=\"settings-61107-optional\">Read optional data</label>\n        </p>\n    </div>\n</form>\n\n<div id=\"about-info\">\n    <p style=\"margin-top: 5em;\">\n        <h5>Utility Meter Viewer</h5>\n        <h6>developed and maintained by <a href=\"mailto:mikael.brorsson@gmail.com\" target=\"_blank\">Mikael Ganehag Brorsson</a></h6>\n        <p>Licensed under the <em>MIT License</em><p>\n        <p>Bitcoin donations: <a href=\"bitcoin:3LaGVDR8od2q3uq9RZNWpDRYLBaZZwMG7E\" target=\"_blank\">3LaGVDR8od2q3uq9RZNWpDRYLBaZZwMG7E</a><p>\n    </p>\n</div>";
 },"useData":true});
 })();
