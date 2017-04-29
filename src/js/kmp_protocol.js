@@ -641,7 +641,7 @@ KMPProtocol.prototype.performReadout = function(callback, rb) {
     if(rb === true) {
         chrome.serial.update(self.serialPort.connectionId, {
             bitrate: 300, 
-            dataBits: "sever",
+            dataBits: "seven",
             parityBit: "even",
             stopBits: "two"
         }, function(result) {
@@ -778,7 +778,7 @@ KMPProtocol.prototype.stage2 = function(result) {
             });
         } else {
             Materialize.toast("Timeout occured", 2000);
-            self.final_callback(records);
+            self.final_callback();
         }
     });
 };
