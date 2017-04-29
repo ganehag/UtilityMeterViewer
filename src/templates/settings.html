@@ -28,7 +28,7 @@
         <h5>Kamstrup KMP</h5>
 
         <div class="">
-            <label for="settings-kmp-registers">Registers</label>
+            <label for="settings-kmp-registers">Registers (series 402/6XX/8XX)</label>
             <select id="settings-kmp-registers" class="browser-default" style="height: 10em; font-size: 130%;" multiple>
             {{#each kmp.registers}}
             <option value="{{addr}}" title="{{desc}}" {{#if selected}}selected{{/if}}>{{reg}} | {{desc}}</option>
@@ -38,7 +38,7 @@
 
         <p>
             <input type="checkbox" id="settings-kmp-legacy" {{#if kmp.legacy}}checked="checked"{{/if}} />
-            <label for="settings-kmp-legacy">Legacy mode (KMP4)</label>
+            <label for="settings-kmp-legacy">Legacy mode (Kamstrup 66cde/401)</label>
         </p>
 
         <br><br>

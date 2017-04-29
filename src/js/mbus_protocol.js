@@ -21,7 +21,7 @@ MBusProtocol.prototype.performReadout = function(callback) {
 MBusProtocol.prototype.stage1 = function(callback) {
     var self = this;
     self.final_callback = callback;
-    self.serialPort.state = 'recv';
+    self.serialPort.state = 'send';
     self.serialPort.timer = 100;
     self.serialPort.eot_char = null;
 
@@ -36,14 +36,17 @@ MBusProtocol.prototype.stage1 = function(callback) {
     };
 
     chrome.serial.update(self.serialPort.connectionId, serialOpts, function(r1) {
-        chrome.serial.send(self.serialPort.connectionId, str2ab(frame), function(r2) {
-            self.stage2.call(self, r2);
-        });
+        setTimeout(function() {
+            chrome.serial.send(self.serialPort.connectionId, str2ab(frame), function(r2) {
+                self.stage2.call(self, r2);
+            });    
+        }, 200);
     });
 };
 MBusProtocol.prototype.stage2 = function(result) {
     var self = this;
-    self.serialPort.timer = 1000;
+    self.serialPort.state = 'recv';
+    self.serialPort.timer = 500;
     
     self.serialPort.recvWatchdog(function(data) {
         var mbus = new MBus();
@@ -62,6 +65,7 @@ MBusProtocol.prototype.stage2 = function(result) {
 MBusProtocol.prototype.stage3 = function(result) {
     var self = this;
     self.serialPort.state = 'recv';
+    self.serialPort.timer = 3000;
 
     var mbus = new MBus();
     var frame = mbus.requestFrame(self.app.options.mbus.address);
@@ -92,6 +96,7 @@ MBusProtocol.prototype.stage3 = function(result) {
 };
 MBusProtocol.prototype.optoWake = function(callback) {
     var self = this;
+    self.serialPort.state = 'send';
 
     if(self.connectionId === null) {
         callback.apply(self);
@@ -106,16 +111,16 @@ MBusProtocol.prototype.optoWake = function(callback) {
 
         chrome.serial.update(self.serialPort.connectionId, serialOpts, function(result) {
             var numChars = 0;
-            var i1 = setInterval(function() {
-                chrome.serial.send(self.serialPort.connectionId, str2ab("\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55"), function(result) {
-                    numChars += 10;
-                });
-            }, (100/serialOpts.bitrate)*1000);
+            var buff = ""
+            for(var i = 0; i < 48; i++) {
+                buff += "\x55\x55\x55\x55\x55\x55\x55\x55\x55\x55";
+            }
 
-            setTimeout(function() {
-                clearInterval(i1);
-                chrome.serial.flush(self.serialPort.connectionId, callback);
-            }, 2000);
+            chrome.serial.send(self.serialPort.connectionId, str2ab(buff), function(result) {
+                setTimeout(function() {
+                    callback.call(result);
+                }, 2500);
+            });
         });
     }
 };

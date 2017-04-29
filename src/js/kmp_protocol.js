@@ -630,38 +630,55 @@ KMPProtocol.prototype.normalizeRegisterData = function(unitid, value) {
     return value;
 };
 
-KMPProtocol.prototype.performReadout = function(callback, registers) {
-    var self = this;
+KMPProtocol.prototype.performReadout = function(callback, rb) {
+    var self = this,
+        registers = rb; 
     self.final_callback = callback;
     self.serialPort.state = 'recv';
     self.serialPort.timer = self.default.timeout;
-    self.serialPort.eot_char = String.fromCharCode(self.KMP_CC_STOPBYTE);
 
-    var frame = new this.Frame(0x80, 0x3f, 0x10, 0x0d),
-        i = 0;
-    // Frame Data
-    // 1. Register Count
-    // 2. List of shorts with reg addr
-    var frameData = String.fromCharCode(registers.length);
-    for(i = 0; i < registers.length; i++) {
-        frameData += self.htons(registers[i]);
-    }
-    frame.setBuffer(frameData);
-
-    self._track_registers = registers;
-
-    chrome.serial.update(self.serialPort.connectionId, {
-        bitrate: self.default.bitrate, 
-        dataBits: self.default.dataBits,
-        parityBit: self.default.parityBit,
-        stopBits: self.default.stopBits
-    }, function(result) {
-        chrome.serial.send(self.serialPort.connectionId, str2ab(frame.toString()), function(result) {
-            self.stage2.call(self, result);
+    // Legacy mode
+    if(rb === true) {
+        chrome.serial.update(self.serialPort.connectionId, {
+            bitrate: 300, 
+            dataBits: "sever",
+            parityBit: "even",
+            stopBits: "two"
+        }, function(result) {
+            var msg = "/?!\r\n";
+            chrome.serial.send(self.serialPort.connectionId, str2ab(msg), function(result) {
+                self.stage2.call(self, result);
+            });
         });
-    });
+    } else {
+        self.serialPort.eot_char = String.fromCharCode(self.KMP_CC_STOPBYTE);
+
+        var frame = new this.Frame(0x80, 0x3f, 0x10, 0x0d),
+            i = 0;
+        // Frame Data
+        // 1. Register Count
+        // 2. List of shorts with reg addr
+        var frameData = String.fromCharCode(registers.length);
+        for(i = 0; i < registers.length; i++) {
+            frameData += self.htons(registers[i]);
+        }
+        frame.setBuffer(frameData);
+
+        self._track_registers = registers;
+
+        chrome.serial.update(self.serialPort.connectionId, {
+            bitrate: self.default.bitrate, 
+            dataBits: self.default.dataBits,
+            parityBit: self.default.parityBit,
+            stopBits: self.default.stopBits
+        }, function(result) {
+            chrome.serial.send(self.serialPort.connectionId, str2ab(frame.toString()), function(result) {
+                self.stage1.call(self, result);
+            });
+        });
+    }
 };
-KMPProtocol.prototype.stage2 = function(result) {
+KMPProtocol.prototype.stage1 = function(result) {
     var self = this;
     self.serialPort.recvWatchdog(function(data) {
         var records = [];
@@ -702,5 +719,73 @@ KMPProtocol.prototype.stage2 = function(result) {
         }
 
         self.final_callback(records);
+    });
+};
+KMPProtocol.prototype.stage2 = function(result) {
+    /*
+     * # Kamstrup 66CDE
+     * In general, the text is built up according to
+     * EN61107/IEC1107, Mode A, but BCC is calculated
+     * arithmetically as on M-Bus and not as module 2.-
+     * binary sum ISO 1155.
+     * Communication is based on ASCII characters with
+     * the following setup:
+     * 300 baud req /300 baud reply, 1 start bit,
+     * 7 data bit, equal parity, 2 stop bit.
+     *
+     * Because... reason!!?
+     * 
+     *
+     * # Kamstrup 401
+     * When the connected reading unit, MULTITERM, 
+     * or the PC sends a recognizable request string,
+     * MULTICAL® 401 answers with a data string 1-2 sec.
+     * after having received the request string.
+     * MULTICAL® 401’s optical data reading uses 
+     * following communication setup:
+     * 300/1200 baud, 1 startbit, 7 databits, even parity,
+     * 2 stopbits
+     * In general, the reading is built-up according to 
+     * EN61107/IEC1107, Mode A, but BCC is calculated arithmatically
+     * as on M-Bus and not as module 2-binary sum ISO1155.
+     *
+     * Again, because: why should you follow an established standard?
+     */
+
+    var self = this;
+    self.serialPort.recvWatchdog(function(data) {
+        if(data.length > 5) {
+            var reply_speed;
+            if(data.indexOf("/KAM0MCC")) {
+                /* Kamstrup Device 401 ...?*/
+                /* Reply speed will be either 300 or 1200 baud... yeay */
+                reply_speed = 1200;
+            } else if(data.indexOf("/KAM0MC")) {
+                /* Kamstrup Device 66 ...?*/
+                /* Reply speed will be 300 baud... */
+                reply_speed = 300;
+            }
+
+            chrome.serial.send(self.serialPort.connectionId, str2ab("/#1\r\n"), function(result) {
+                chrome.serial.update(self.serialPort.connectionId, {
+                    bitrate: reply_speed, 
+                    dataBits: "seven",
+                    parityBit: "even",
+                    stopBits: "two"
+                }, function(result) {
+                    self.stage3.call(self, result); 
+                });
+            });
+        } else {
+            Materialize.toast("Timeout occured", 2000);
+            self.final_callback(records);
+        }
+    });
+};
+
+KMPProtocol.prototype.stage3 = function(result) {
+    var self = this;
+    self.serialPort.recvWatchdog(function(data) {
+        console.log(data);
     });
 };
