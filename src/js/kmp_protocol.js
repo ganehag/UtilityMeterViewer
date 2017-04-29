@@ -406,6 +406,20 @@ var KMPProtocol = function(app, serialPort) {
     self.KMP_UNIT_NUMMER = 0x33;
     self.KMP_UNIT_BAR = 0x34;
 
+    // Legacy Kamstrup CCC codes
+    self.CCC_KWH = 0;
+    self.CCC_MWH = 1;
+    self.CCC_GCAL = 2;
+    self.CCC_GJ = 3;
+    self.CCC_M3 = 4;
+    self.CCC_LH = 5;
+    self.CCC_M3H = 6;
+    self.CCC_KW = 7;
+    self.CCC_MW = 8;
+
+    self.GJ_PER_MWH  = 3.6;
+    self.JOULES_PER_CALORIE = 4.1840;
+
     // 1. Registers are of length "short".
     // 2. You can only read out 8 registers at a time.
     self.Frame = function(start, dest, cid, stop) {
@@ -752,7 +766,41 @@ KMPProtocol.prototype.stage2 = function(result) {
      * Again, because: why should you follow an established standard?
      */
 
+    var kmpObj = {
+        "reply_speed": 300,
+        "STD1": {
+            energy: 0,
+            volume: 0,
+            hours: 0,
+            t1: 0,
+            t2: 0,
+            deltaT: 0,
+            power: 0,
+            flow: 0,
+            peak: 0,
+            info: ""
+        },
+        "STD2": {
+            custno: "",
+            ta2: "",
+            tl2: "",
+            ta3: "",
+            tl3: "",
+            in_a: "",
+            in_b: "",
+            prog_a: "",
+            prog_b: "",
+            prog_ccc: "",
+            dd: "",
+            e: "",
+            ff: "",
+            gg: "",
+            date: ""
+        }
+    }
+
     var self = this;
+    self.serialPort.timer = 500;
     self.serialPort.recvWatchdog(function(data) {
         if(data.length > 5) {
             var reply_speed;
@@ -766,26 +814,184 @@ KMPProtocol.prototype.stage2 = function(result) {
                 reply_speed = 300;
             }
 
-            chrome.serial.send(self.serialPort.connectionId, str2ab("/#1\r\n"), function(result) {
+            kmpObj.reply_speed = reply_speed;
+
+            chrome.serial.send(self.serialPort.connectionId, str2ab("/#2\r\n"), function(result) {
                 chrome.serial.update(self.serialPort.connectionId, {
                     bitrate: reply_speed, 
                     dataBits: "seven",
                     parityBit: "even",
                     stopBits: "two"
                 }, function(result) {
-                    self.stage3.call(self, result); 
+                    self.stage3.call(self, kmpObj); 
                 });
             });
         } else {
             Materialize.toast("Timeout occured", 2000);
-            self.final_callback();
+            self.final_callback.call(self);
         }
     });
 };
 
-KMPProtocol.prototype.stage3 = function(result) {
+KMPProtocol.prototype.stage3 = function(kmpObj) {
     var self = this;
+
     self.serialPort.recvWatchdog(function(data) {
-        console.log(data);
+        if(data.length > 5) {
+            var items = data.split(" ");
+            
+            kmpObj.STD2.custno = items[0];
+            kmpObj.STD2.ta2 = items[1];
+            kmpObj.STD2.tl2 = items[2];
+            kmpObj.STD2.ta3 = items[3];
+            kmpObj.STD2.tl3 = items[4];
+            kmpObj.STD2.in_a = items[5];
+            kmpObj.STD2.in_b = items[6];
+            kmpObj.STD2.prog_a = items[7].slice(2, 3);
+            kmpObj.STD2.prog_b = items[7].slice(3, 4);
+            kmpObj.STD2.prog_ccc = items[7].slice(4, 7);
+            kmpObj.STD2.dd = items[8].slice(0, 2);
+            kmpObj.STD2.e = items[8].slice(2, 3);
+            kmpObj.STD2.ff = items[8].slice(3, 5);
+            kmpObj.STD2.gg = items[8].slice(5, 7);
+            kmpObj.STD2.date = items[9];
+
+            chrome.serial.update(self.serialPort.connectionId, {
+                bitrate: 300, 
+                dataBits: "seven",
+                parityBit: "even",
+                stopBits: "two"
+            }, function(result) {
+                chrome.serial.send(self.serialPort.connectionId, str2ab("/#1\r\n"), function(result) {
+                    chrome.serial.update(self.serialPort.connectionId, {
+                        bitrate: kmpObj.reply_speed, 
+                        dataBits: "seven",
+                        parityBit: "even",
+                        stopBits: "two"
+                    }, function(result) {
+                        self.stage4.call(self, kmpObj); 
+                    });
+                });
+            });
+            // self.final_callback.call(self, records);
+        } else {
+            Materialize.toast("Timeout occured", 2000);
+            self.final_callback.call(self);
+        }
+    });
+};
+
+KMPProtocol.prototype.stage4 = function(kmpObj) {
+    var self = this;
+
+    var B_tbl = {
+        "2": {ccc: self.CCC_GJ, unit: "GJ"},
+        "3": {ccc: self.CCC_KWH, unit: "kWh"},
+        "4": {ccc: self.CCC_MWH, unit: "MWh"},
+        "5": {ccc: self.CCC_GCAL, unit: "GCal"}
+    };
+
+    var CCC_tbl = {
+        /* CCC codes for ULTRAFLOW II, type 65 54 XXX */
+        /* no   kWh MWh GCal  GJ  m3 l/h m3/h  kw  MW */
+        "119": [ 0,  3,   3,  2,  2,  0,  -1,  1, -1],
+        "120": [-1,  2,   2,  1,  1,  0,  -1,  1, -1],
+        "136": [ 0,  3,   3,  2,  2,  0,  -1,  1, -1],
+        "137": [-1,  2,   2,  1,  1,  0,  -1,  1, -1],
+        "151": [-1,  2,   2,  1,  1,  0,  -1,  1, -1],
+        "158": [-1,  1,   1,  0,  0, -1,   2,  0, -1],
+
+        /* CCC codes for ULTRAFLOW type 65-R/S/T */
+        /* no   kWh MWh Gcal  GJ  m3 l/h m3/h  kw  MW */
+        "178": [-1,  2,   2,  1,  1,  0,  -1,  1, -1],
+
+        /* Multical Compact */
+        /* no   kWh MWh GCal  GJ  m3 l/h m3/h  kw  MW */
+        "827": [ 0,  3,   3,  2,  2,  0,  -1,  1, -1],
+        "833": [ 0,  3,   3,  2,  2,  0,  -1,  1, -1],
+        "839": [ 0,  3,   3,  2,  2,  0,  -1,  1, -1],
+    };
+
+    self.serialPort.recvWatchdog(function(data) {
+        if(data.length > 5) {
+            var items = data.split(" ");
+
+            kmpObj.STD1.energy = items[0];
+            kmpObj.STD1.volume = items[1];
+            kmpObj.STD1.hours = items[2];
+            kmpObj.STD1.t1 = items[3];
+            kmpObj.STD1.t2 = items[4];
+            kmpObj.STD1.deltaT = items[5];
+            kmpObj.STD1.power = items[6];
+            kmpObj.STD1.flow = items[7];
+            kmpObj.STD1.peak = items[8];
+            kmpObj.STD1.info = items[9];
+
+
+            var progB = B_tbl[kmpObj.STD2.prog_b];
+            var progCCC = CCC_tbl[kmpObj.STD2.prog_ccc];
+
+            if(progB === undefined || progCCC === undefined) {
+                Materialize.toast("Invalid Prog B || Prog CCC.", 2000);
+                self.final_callback.call(self);
+                return;
+            }
+
+            var decimals = 2;
+            kmpObj.STD1.t1 = parseFloat(kmpObj.STD1.t1) * Math.pow(10, -1 * decimals);
+            kmpObj.STD1.t2 = parseFloat(kmpObj.STD1.t2) *  Math.pow(10, -1 * decimals);
+            kmpObj.STD1.deltaT = parseFloat(kmpObj.STD1.deltaT) *  Math.pow(10, -1 * decimals);
+
+            decimals = progCCC[progB.ccc];
+            if(decimals === undefined) {
+                Materialize.toast("B code points to an invalid CCC code.", 2000);
+                self.final_callback.call(self);
+                return;
+            }
+
+            kmpObj.STD1.energy = parseFloat(kmpObj.STD1.energy) * Math.pow(10, -1 * decimals);
+            if(progB.ccc === self.CCC_GJ) {
+                kmpObj.STD1.energy /= self.GJ_PER_MWH
+            } else if (progB.ccc === self.CCC_GCAL) {
+                kmpObj.STD1.energy /= self.GJ_PER_MWH * self.JOULES_PER_CALORIE;
+            }
+
+            decimals = progCCC[self.CCC_M3];
+            kmpObj.STD1.volume = parseFloat(kmpObj.STD1.volume) * Math.pow(10, -1 * decimals);
+
+            if(progCCC[self.CCC_KW] >= 0) {
+                decimals = progCCC[self.CCC_KW];
+            } else {
+                decimals = progCCC[self.CCC_MW] - 3;
+            }
+
+            kmpObj.STD1.power = parseFloat(kmpObj.STD1.power) * Math.pow(10, -1 * decimals);
+            kmpObj.STD1.peak = parseFloat(kmpObj.STD1.peak) *  Math.pow(10, -1 * decimals);
+        
+            if(progCCC[self.CCC_LH] >= 0) {
+                decimals = progCCC[self.CCC_LH];
+            } else {
+                decimals = progCCC[self.CCC_M3H] - 3;
+            }
+
+            kmpObj.STD1.flow = parseFloat(kmpObj.STD1.flow) * Math.pow(10, -1 * decimals);
+            kmpObj.STD1.hours = parseInt(kmpObj.STD1.hours)
+
+            self.final_callback.call(self, [
+                {func: "Energy", desc: "", value: kmpObj.STD1.energy},
+                {func: "Volume", desc: "", value: kmpObj.STD1.volume},
+                {func: "Hours", desc: "", value: kmpObj.STD1.hours},
+                {func: "T1", desc: "", value: kmpObj.STD1.t1},
+                {func: "T2", desc: "", value: kmpObj.STD1.t2},
+                {func: "T1-T2", desc: "", value: kmpObj.STD1.deltaT},
+                {func: "Power", desc: "", value: kmpObj.STD1.power},
+                {func: "Flow", desc: "", value: kmpObj.STD1.flow},
+                {func: "Peak power/flow actual", desc: "", value: kmpObj.STD1.peak},
+                {func: "Info", desc: "", value: kmpObj.STD1.info}
+            ]);
+        } else {
+            Materialize.toast("Timeout occured", 2000);
+            self.final_callback.call(self);
+        }
     });
 };
