@@ -988,7 +988,7 @@ KMPProtocol.prototype.stage4 = function(kmpObj) {
                 {func: "Flow", desc: "", value: kmpObj.STD1.flow},
                 {func: "Peak power/flow actual", desc: "", value: kmpObj.STD1.peak},
                 {func: "Info", desc: "", value: kmpObj.STD1.info}
-            ]);
+            ], true);
         } else {
             Materialize.toast("Timeout occured", 2000);
             self.final_callback.call(self);

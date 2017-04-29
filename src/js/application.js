@@ -449,9 +449,14 @@ window.onload = function() {
                         $('#content').html("");
                         $('#manufacturer').html("");
 
-                        serialPort.kmp.performReadout(function(records) {
+                        serialPort.kmp.performReadout(function(records, legacy) {
                             if(records && records.length) {
-                                $('#manufacturer').html("Kamstrup 402/6XX/8XX");
+                                if(legacy) {
+                                    $('#manufacturer').html("Kamstrup 66CDE / 401");    
+                                } else {
+                                    $('#manufacturer').html("Kamstrup 402 / 6XX / 8XX");
+                                }
+                                
                                 var html = Handlebars.templates['kmp-table.html']({records: records});
                                 $('#content').html(html);
                             }
