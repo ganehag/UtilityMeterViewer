@@ -168,6 +168,7 @@ var SerialPort = function(opts, app) {
 };
 SerialPort.prototype.recvWatchdog = function(callback) {
     var self = this;
+    self.state = 'recv';
 
     if(callback !== null) {
         self.recv_callback = callback;
