@@ -449,19 +449,15 @@ window.onload = function() {
                         $('#content').html("");
                         $('#manufacturer').html("");
 
-
-                        // KMP4..
-                        // In general, the reading is built-up according to EN61107/IEC1107, Mode A, but BCC is calculated arithmatically as on M-Bus and not as module 2-binary sum ISO1155.
-
                         serialPort.kmp.performReadout(function(records) {
                             if(records && records.length) {
-                                $('#manufacturer').html("Kamstrup 6XX/8XX");
+                                $('#manufacturer').html("Kamstrup 402/6XX/8XX");
                                 var html = Handlebars.templates['kmp-table.html']({records: records});
                                 $('#content').html(html);
                             }
 
                             $('#modal-loading').modal('close');
-                        }, app.options.kmp.registers.slice(0, 8));
+                        }, app.options.kmp.legacy ? true : app.options.kmp.registers.slice(0, 8));
                     }
                 });
                 $('#modal-loading').modal('open');
