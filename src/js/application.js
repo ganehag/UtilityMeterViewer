@@ -127,23 +127,35 @@ var SerialPort = function(opts, app) {
     this.app = app;
 
     this.connectionId = null;
+    this.path = null;
     this.options = {
         bitrate: app.options.mbus.baudrate,
         dataBits: "eight",
         parityBit: "even",
         stopBits: "one"
     };
-    this.state = 'idle';
-    this.recv_buf = "";
-    this.timer = 100;
-    this.eot_char = null;
-    this.timeout = null;
-    this.recv_callback = null;
+    this.current_settings = {
+        bitrate: app.options.mbus.baudrate,
+        dataBits: "eight",
+        parityBit: "even",
+        stopBits: "one"
+    };
+    this.reset();
 
     chrome.serial.onReceiveError.addListener(function (e) {
         switch(e.error) {
             case 'break':
+                chrome.serial.clearBreak(self.connectionId, function() {
+                    self.reconnect.call(self);
+                });
+            break;
+
+            case 'parity_error':
                 self.reconnect.call(self);
+            break;
+
+            default:
+                console.log(e);
             break;
         }
     });
@@ -165,6 +177,25 @@ var SerialPort = function(opts, app) {
     this.mbus = new MBusProtocol(app, this);
     this.iec61107 = new IEC61107Protocol(app, this);
     this.kmp = new KMPProtocol(app, this);
+};
+SerialPort.prototype.reset = function() {
+    if(self.timeout !== null) {
+        clearTimeout(self.timeout);
+    }
+    this.state = 'idle';
+    this.recv_buf = "";
+    this.timer = 100;
+    this.eot_char = null;
+    this.timeout = null;
+    this.recv_callback = null;
+};
+SerialPort.prototype.drain = function(length, callback) {
+    if(this.connectionId !== null) {
+        chrome.serial.getInfo(this.connectionId, function (info) {
+            var time_ms = ((((length * (8 + 2) ) / parseFloat(info.bitrate)) * 1000.0));
+            setTimeout(callback, time_ms);
+        });
+    }
 };
 SerialPort.prototype.recvWatchdog = function(callback) {
     var self = this;
@@ -204,12 +235,15 @@ SerialPort.prototype.recvWatchdog = function(callback) {
 };
 SerialPort.prototype.connect = function(path, callback) {
     var self = this;
-    var options = {
 
-    };
+    if(path === null) {
+        path = self.path;
+    } else {
+        self.path = path;
+    }
 
     if(this.connectionId === null) {
-        chrome.serial.connect(path, options, function(info) {
+        chrome.serial.connect(path, self.current_settings, function(info) {
             self.connectionId = info.connectionId;
 
             if(callback) {
@@ -225,10 +259,20 @@ SerialPort.prototype.disconnect = function(callback) {
         callback();
     });
 };
-SerialPort.prototype.reconnect = function() {
+SerialPort.prototype.reconnect = function(callback) {
     var self = this;
-    self.disconnect.call(self, function() {
-        self.connect.call(self);    
+
+    chrome.serial.getInfo(this.connectionId, function (info) {
+        self.current_settings = {
+            bitrate: info.bitrate,
+            dataBits: info.dataBits,
+            parityBit: info.parityBit,
+            stopBits: info.stopBits
+        };
+
+        self.disconnect.call(self, function() {
+            self.connect.call(self, self.path, callback);
+        });
     });
 };
 
