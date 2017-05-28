@@ -5,7 +5,7 @@ var IEC61107Protocol = function(app, serialPort) {
         bitrate: 300,
         dataBits: "seven",
         parityBit: "even",
-        stopBits: "two"
+        stopBits: "one"
     };
     this.STX = '\x02';
     this.ETX = '\x03';
