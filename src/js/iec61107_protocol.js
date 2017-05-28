@@ -86,9 +86,11 @@ IEC61107Protocol.prototype.optoWake = function(callback) {
             stopBits: self.default.stopBits
         }, function(result) {
             chrome.serial.send(self.serialPort.connectionId, str2ab(wake_str), function(result) {
-                if(callback) {
-                    callback.call(self);
-                }
+                self.serialPort.drain(wakeup_len, function() {
+                    if(callback) {
+                        callback.call(self);
+                    }
+                });
             });
         });
 
@@ -96,9 +98,13 @@ IEC61107Protocol.prototype.optoWake = function(callback) {
 };
 IEC61107Protocol.prototype.performReadout = function(callback) {
     var self = this;
+    self.serialPort.reset();
+
     if($('#settings-iec61107-wakeup').val() != -1) {
         self.optoWake(function() {
-            self.stage1.call(self, callback);
+            setTimeout(function() {
+                self.stage1.call(self, callback);
+            }, 100);
         });
     } else {
         self.stage1.call(self, callback);
